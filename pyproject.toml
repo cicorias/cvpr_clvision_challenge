@@ -10,6 +10,7 @@ torch = "^1.6.0"
 torchvision = "^0.7.0"
 psutil = "^5.7.2"
 jupyterlab = "^2.2.8"
+matplotlib = "^3.3.2"
 
 [tool.poetry.dev-dependencies]
 
