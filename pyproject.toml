@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "cvpr_clvision_challenge"
+version = "0.1.0"
+description = ""
+authors = ["Shawn Cicoria <github@cicoria.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+torch = "^1.6.0"
+torchvision = "^0.7.0"
+psutil = "^5.7.2"
+jupyterlab = "^2.2.8"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
