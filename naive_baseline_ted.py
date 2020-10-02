@@ -63,17 +63,23 @@ def main(args):
     
     if args.classifier == 'ResNet34':
         classifier = models.resnet34(pretrained=True)
-        dropout_layer_fc = torch.nn.Sequential(
-            torch.nn.Dropout(args.dropout),
-            torch.nn.Linear(512, 128),
-            torch.nn.Dropout(args.dropout),
-            torch.nn.Linear(128, args.n_classes)
-        )
-        classifier.fc = dropout_layer_fc
+        classifier.fc = torch.nn.Linear(512, args.n_classes)
         
     if args.classifier == 'SqueezeNet1.1':
         classifier = models.squeezenet1_1(pretrained=True)
         classifier.fc = torch.nn.Linear(512, args.n_classes)
+        
+    if args.dropout:
+        print(f"Using Dropout of {args.dropout}")
+        dropout_layer_fc = torch.nn.Sequential(
+            torch.nn.Dropout(args.dropout),
+            torch.nn.Linear(512, 128),
+            torch.nn.Dropout(args.dropout),
+            torch.nn.Linear(128, 64),
+            torch.nn.Dropout(args.dropout),
+            torch.nn.Linear(64, args.n_classes)
+        )
+        classifier.fc = dropout_layer_fc
         
 
     opt = torch.optim.SGD(classifier.parameters(), lr=args.lr, weight_decay=0.0001)
