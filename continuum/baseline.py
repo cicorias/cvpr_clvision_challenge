@@ -101,7 +101,12 @@ print(f"Number of tasks: {scenario.nb_tasks}.")
 # Define a model
 classifier = models.resnet18(pretrained=True)
 classifier.fc = nn.Linear(512, 50)
-classifier.cuda()
+
+if torch.cuda.is_available():
+    print('cuda IS available')
+    classifier.cuda()
+else:
+    print('cuda / GPU not available.')
 
 # Tune the model hyperparameters
 epochs = 1
