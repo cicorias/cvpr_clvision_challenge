@@ -15,6 +15,7 @@ from continuum.tasks import split_train_val
 from torchvision.transforms.transforms import Normalize, ToTensor
 
 
+
 ######################### UTIL FUNCTIONS ################################
 
 # Workaround until we add core50_train.csv to the data folder (I don't have permissions)
@@ -88,6 +89,7 @@ class MyCore50(Core50):
 
 # Load the core50 data
 core50 = Core50("core50/data/", train=True, download=False)
+
 
 # A new classes scenario
 scenario = ClassIncremental(
