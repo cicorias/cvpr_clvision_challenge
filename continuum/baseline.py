@@ -86,7 +86,7 @@ class MyCore50(Core50):
 ####################### CONTINUOUS LEARNING IMPLEMENTATION ##############################
 
 # Load the core50 data
-core50 = MyCore50("core50/data/", train=True, train_image_ids=train_img_ids(), download=False)
+core50 = MyCore50("core50/data/", train=True, download=False)
 
 # A new classes scenario
 scenario = ClassIncremental(
