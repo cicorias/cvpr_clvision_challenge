@@ -57,12 +57,13 @@ optimizer = optim.SGD(classifier.parameters(), lr=lr)
 
 # Iterate through our NC scenario
 for task_id, train_taskset in enumerate(scenario):
+    print("<-------------- Task {task_id + 1} ---------------->")
     # train_taskset, val_taskset = split_train_val(train_taskset, val_split=0.1)
     train_loader = DataLoader(train_taskset, batch_size=32, shuffle=True)
     
     unq_cls_train = np.unique(train_taskset._y)
     print(f"This task contains {len(unq_cls_train)} unique classes")
-    print(f"Train: {unq_cls_train}")
+    print(f"Train classes: {unq_cls_train}")
 
     for epoch in range(epochs):
 
@@ -88,7 +89,7 @@ for task_id, train_taskset in enumerate(scenario):
             
             if i % 100 == 99:
                 print('[%d, %5d] loss: %.3f' %
-                    (epoch + 1, i + 1, running_loss / 100))
+                    (epoch + 1, i + 1, running_loss / 3200))
                 running_loss = 0.0
                 train_total = 0.0
                 train_correct = 0.0            
@@ -105,7 +106,7 @@ for task_id, train_taskset in enumerate(scenario):
 
         # Make sure we're validating the correct classes
         unq_cls_validate = np.unique(val_taskset._y)
-        print(f"Validate: {unq_cls_validate}")
+        print(f"Validate classes: {unq_cls_validate}")
 
         total = 0.0
         correct = 0.0
@@ -117,7 +118,7 @@ for task_id, train_taskset in enumerate(scenario):
                 total += y.size(0)
                 correct += (predicted == y).sum().item()
         
-        print(f"Validation Accuracy: {100.0 * correct / total}")
+        print(f"Validation Accuracy: {100.0 * correct / total}%")
     
     classifier.train()
 
