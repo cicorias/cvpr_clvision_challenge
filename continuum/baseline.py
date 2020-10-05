@@ -48,8 +48,9 @@ else:
     print('cuda / GPU not available.')
 
 # Tune the model hyperparameters
-epochs = 1
-lr = 0.01
+epochs = 5
+lr = 0.1
+weight_decay = 0
 
 # Define a loss function and criterion
 criterion = nn.CrossEntropyLoss()
@@ -57,17 +58,17 @@ optimizer = optim.SGD(classifier.parameters(), lr=lr)
 
 # Iterate through our NC scenario
 for task_id, train_taskset in enumerate(scenario):
-    print("<-------------- Task {task_id + 1} ---------------->")
+    print(f"<-------------- Task {task_id + 1} ---------------->")
     # train_taskset, val_taskset = split_train_val(train_taskset, val_split=0.1)
     train_loader = DataLoader(train_taskset, batch_size=32, shuffle=True)
     
     unq_cls_train = np.unique(train_taskset._y)
     print(f"This task contains {len(unq_cls_train)} unique classes")
-    print(f"Train classes: {unq_cls_train}")
+    print(f"Training classes: {unq_cls_train}")
 
     for epoch in range(epochs):
 
-        print(f"<----- Epoch {epoch + 1} ------->")
+        print(f"<------ Epoch {epoch + 1} ------->")
 
         running_loss = 0.0
         train_total = 0.0
@@ -88,11 +89,10 @@ for task_id, train_taskset in enumerate(scenario):
             train_correct += (train_predicted == y).sum().item()
             
             if i % 100 == 99:
-                print('[%d, %5d] loss: %.3f' %
-                    (epoch + 1, i + 1, running_loss / 3200))
+                print(f'[Mini-batch {i + 1}] avg loss: {running_loss / 3200:.5f}')
                 running_loss = 0.0
-                train_total = 0.0
-                train_correct = 0.0            
+
+        print(f"Training accuracy: {100.0 * train_correct / train_total}%")                 
 
     print("Finished Training")
     classifier.eval()
@@ -106,7 +106,7 @@ for task_id, train_taskset in enumerate(scenario):
 
         # Make sure we're validating the correct classes
         unq_cls_validate = np.unique(val_taskset._y)
-        print(f"Validate classes: {unq_cls_validate}")
+        print(f"Validating classes: {unq_cls_validate}")
 
         total = 0.0
         correct = 0.0
