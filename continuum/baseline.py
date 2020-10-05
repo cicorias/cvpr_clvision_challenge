@@ -48,13 +48,13 @@ else:
     print('cuda / GPU not available.')
 
 # Tune the model hyperparameters
-epochs = 5
-lr = 0.1
-weight_decay = 0
+epochs = 8
+lr = 0.001
+weight_decay = 0.0001
 
 # Define a loss function and criterion
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(classifier.parameters(), lr=lr)
+optimizer = optim.SGD(classifier.parameters(), lr=lr, weight_decay=weight_decay)
 
 # Iterate through our NC scenario
 for task_id, train_taskset in enumerate(scenario):
