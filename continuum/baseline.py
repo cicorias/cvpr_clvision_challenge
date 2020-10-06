@@ -20,7 +20,7 @@ from continuum.tasks import split_train_val
 from torchvision.transforms.transforms import Normalize, ToTensor
 
 
-def on_task_update(task_id x_mem, y_mem):
+def on_task_update(task_id, x_mem, y_mem):
     """
     EWC weight updater
     """
