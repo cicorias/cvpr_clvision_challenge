@@ -38,8 +38,8 @@ print(f"Number of classes: {scenario.nb_classes}.")
 print(f"Number of tasks: {scenario.nb_tasks}.")
 
 # Define a model
-classifier = models.resnet18(pretrained=True)
-classifier.fc = nn.Linear(512, 50)
+classifier = models.resnet101(pretrained=True)
+classifier.fc = nn.Linear(2048, 50)
 
 if torch.cuda.is_available():
     print('cuda IS available')
@@ -48,9 +48,11 @@ else:
     print('cuda / GPU not available.')
 
 # Tune the model hyperparameters
-epochs = 8
-lr = 0.001
-weight_decay = 0.0001
+max_epochs = 8
+convergence_criterion = 0.004
+lr = 0.00001
+weight_decay = 0.000001
+momentum = 0.9
 
 # Define a loss function and criterion
 criterion = nn.CrossEntropyLoss()
@@ -66,7 +68,14 @@ for task_id, train_taskset in enumerate(scenario):
     print(f"This task contains {len(unq_cls_train)} unique classes")
     print(f"Training classes: {unq_cls_train}")
 
-    for epoch in range(epochs):
+    # End early criterion
+    last_avg_running_loss = convergence_criterion
+    did_converge = False
+    for epoch in range(max_epochs):
+
+        # End if the loss has converged
+        if did_converge:
+            break
 
         print(f"<------ Epoch {epoch + 1} ------->")
 
@@ -89,7 +98,13 @@ for task_id, train_taskset in enumerate(scenario):
             train_correct += (train_predicted == y).sum().item()
             
             if i % 100 == 99:
-                print(f'[Mini-batch {i + 1}] avg loss: {running_loss / 3200:.5f}')
+                avg_running_loss = running_loss / 3200
+                print(f'[Mini-batch {i + 1}] avg loss: {avg_running_loss:.5f}')
+                # End early criterion
+                if avg_running_loss < convergence_criterion:
+                    did_converge = True
+                    break
+                last_avg_running_loss = avg_running_loss
                 running_loss = 0.0
 
         print(f"Training accuracy: {100.0 * train_correct / train_total}%")                 
