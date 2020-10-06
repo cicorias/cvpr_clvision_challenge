@@ -1,4 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
+import argparse
+
 from typing import Iterable, Set, Tuple, Union
 
 import numpy as np
@@ -14,131 +19,201 @@ from continuum.datasets import Core50
 from continuum.tasks import split_train_val
 from torchvision.transforms.transforms import Normalize, ToTensor
 
-print(os.getcwd())
+def main(args):
 
-# Load the core50 data
-core50 = Core50("../core50/data/", train=True, download=False)
-core50_val = Core50("../core50/data", train=False, download=False)
+    print(os.getcwd())
 
-# A new classes scenario
-scenario = ClassIncremental(
-    core50,
-    increment=5,
-    initial_increment=10,
-    transformations=[ ToTensor(), Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])]
-)
-scenario_val = ClassIncremental(
-    core50_val,
-    increment=5,
-    initial_increment=10,
-    transformations=[ ToTensor(), Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])]
-)
+    # print args recap
+    print(args, end="\n\n")
 
-print(f"Number of classes: {scenario.nb_classes}.")
-print(f"Number of tasks: {scenario.nb_tasks}.")
+    # Load the core50 data
+    # TODO: check the symbolic links as for me no '../' prefix needed.
+    core50 = Core50("core50/data/", train=True, download=False)
+    core50_val = Core50("core50/data", train=False, download=False)
 
-# Define a model
-classifier = models.resnet101(pretrained=True)
-classifier.fc = nn.Linear(2048, 50)
+    # A new classes scenario
+    scenario = ClassIncremental(
+        core50,
+        increment=5,
+        initial_increment=10,
+        transformations=[ ToTensor(), Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])]
+    )
+    scenario_val = ClassIncremental(
+        core50_val,
+        increment=5,
+        initial_increment=10,
+        transformations=[ ToTensor(), Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])]
+    )
 
-if torch.cuda.is_available():
-    print('cuda IS available')
-    classifier.cuda()
-else:
-    print('cuda / GPU not available.')
+    print(f"Number of classes: {scenario.nb_classes}.")
+    print(f"Number of tasks: {scenario.nb_tasks}.")
 
-# Tune the model hyperparameters
-max_epochs = 8
-convergence_criterion = 0.004  # End early if loss is less than this
-lr = 0.00001
-weight_decay = 0.000001
-momentum = 0.9
+    # Define a model
+    # model
+    if args.classifier == 'resnet18':
+        classifier = models.resnet18(pretrained=True)
+        classifier.fc = torch.nn.Linear(512, args.n_classes)
+    
+    elif args.classifier == 'resnet101':
+        classifier = models.resnet101(pretrained=True)
+        classifier.fc = nn.Linear(2048, args.n_classes)
+    
+    else:
+        raise Exception('no classifier picked')
 
-# Define a loss function and criterion
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(classifier.parameters(), lr=lr, weight_decay=weight_decay)
+    # Tune the model hyperparameters
+    max_epochs = args.epochs # 8
+    convergence_criterion = args.convergence_criterion # 0.004  # End early if loss is less than this
+    lr = args.lr  # 0.00001
+    weight_decay = args.weight_decay # 0.000001
+    momentum = args.momentum # 0.9 #  TODO: not used currently
 
-# Iterate through our NC scenario
-for task_id, train_taskset in enumerate(scenario):
+    # Define a loss function and criterion
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(classifier.parameters(), lr=lr, weight_decay=weight_decay)
 
-    print(f"<-------------- Task {task_id + 1} ---------------->")
+    # Iterate through our NC scenario
+    for task_id, train_taskset in enumerate(scenario):
 
-    train_loader = DataLoader(train_taskset, batch_size=32, shuffle=True)
-    unq_cls_train = np.unique(train_taskset._y)
+        print(f"<-------------- Task {task_id + 1} ---------------->")
 
-    print(f"This task contains {len(unq_cls_train)} unique classes")
-    print(f"Training classes: {unq_cls_train}")
+        train_loader = DataLoader(train_taskset, batch_size=32, shuffle=True)
+        unq_cls_train = np.unique(train_taskset._y)
 
-    # End early criterion
-    last_avg_running_loss = convergence_criterion
-    did_converge = False
+        print(f"This task contains {len(unq_cls_train)} unique classes")
+        print(f"Training classes: {unq_cls_train}")
 
-    for epoch in range(max_epochs):
+        # End early criterion
+        last_avg_running_loss = convergence_criterion #  TODO: not used currently
+        did_converge = False
 
-        # End if the loss has converged to criterion
-        if did_converge:
-            break
+        for epoch in range(max_epochs):
 
-        print(f"<------ Epoch {epoch + 1} ------->")
+            # End if the loss has converged to criterion
+            if did_converge:
+                break
 
-        running_loss = 0.0
-        train_total = 0.0
-        train_correct = 0.0 
-        for i, (x, y, t) in enumerate(train_loader):
-            
-            # Outputs batches of data, one scenario at a time
-            x, y = x.cuda(), y.cuda()
-            outputs = classifier(x)
-            loss = criterion(outputs, y)
-            loss.backward()
-            optimizer.step()
+            print(f"<------ Epoch {epoch + 1} ------->")
 
-            # print training statistics
-            running_loss += loss.item()
-            train_total += y.size(0)
-            _, train_predicted = torch.max(outputs.data, 1)
-            train_correct += (train_predicted == y).sum().item()
-            
-            if i % 100 == 99:
-                avg_running_loss = running_loss / 3200
-                print(f'[Mini-batch {i + 1}] avg loss: {avg_running_loss:.5f}')
-                # End early criterion
-                if avg_running_loss < convergence_criterion:
-                    did_converge = True
-                    break
-                last_avg_running_loss = avg_running_loss
-                running_loss = 0.0
-
-        print(f"Training accuracy: {100.0 * train_correct / train_total}%")                 
-
-    print("Finished Training")
-    classifier.eval()
-
-    # Validate against separate validation data
-    for val_task_id, val_taskset in enumerate(scenario_val):
-
-        # Validate on all previously trained tasks (but not future tasks)
-        if val_task_id > task_id:
-            break
-
-        val_loader = DataLoader(val_taskset, batch_size=32, shuffle=True)
-
-        # Make sure we're validating the correct classes
-        unq_cls_validate = np.unique(val_taskset._y)
-        print(f"Validating classes: {unq_cls_validate}")
-
-        total = 0.0
-        correct = 0.0
-        with torch.no_grad():
-            for x, y, t in val_loader:
+            running_loss = 0.0
+            train_total = 0.0
+            train_correct = 0.0 
+            for i, (x, y, t) in enumerate(train_loader):
+                
+                # Outputs batches of data, one scenario at a time
                 x, y = x.cuda(), y.cuda()
                 outputs = classifier(x)
-                _, predicted = torch.max(outputs.data, 1)
-                total += y.size(0)
-                correct += (predicted == y).sum().item()
-        
-        print(f"Validation Accuracy: {100.0 * correct / total}%")
-    
-    classifier.train()
+                loss = criterion(outputs, y)
+                loss.backward()
+                optimizer.step()
 
+                # print training statistics
+                running_loss += loss.item()
+                train_total += y.size(0)
+                _, train_predicted = torch.max(outputs.data, 1)
+                train_correct += (train_predicted == y).sum().item()
+                
+                if i % 100 == 99:
+                    avg_running_loss = running_loss / 3200
+                    print(f'[Mini-batch {i + 1}] avg loss: {avg_running_loss:.5f}')
+                    # End early criterion
+                    if avg_running_loss < convergence_criterion:
+                        did_converge = True
+                        break
+                    last_avg_running_loss = avg_running_loss
+                    running_loss = 0.0
+
+            print(f"Training accuracy: {100.0 * train_correct / train_total}%")                 
+
+        print("Finished Training")
+        classifier.eval()
+
+        # Validate against separate validation data
+        for val_task_id, val_taskset in enumerate(scenario_val):
+
+            # Validate on all previously trained tasks (but not future tasks)
+            if val_task_id > task_id:
+                break
+
+            val_loader = DataLoader(val_taskset, batch_size=32, shuffle=True)
+
+            # Make sure we're validating the correct classes
+            unq_cls_validate = np.unique(val_taskset._y)
+            print(f"Validating classes: {unq_cls_validate}")
+
+            total = 0.0
+            correct = 0.0
+            with torch.no_grad():
+                for x, y, t in val_loader:
+                    x, y = x.cuda(), y.cuda()
+                    outputs = classifier(x)
+                    _, predicted = torch.max(outputs.data, 1)
+                    total += y.size(0)
+                    correct += (predicted == y).sum().item()
+            
+            print(f"Validation Accuracy: {100.0 * correct / total}%")
+        
+        classifier.train()
+
+        
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser('Ted David Shawn - NJIT')
+
+    # General
+    # parser.add_argument('--scenario', type=str, default="multi-task-nc",
+    #                     choices=['ni', 'multi-task-nc', 'nic'])
+    # parser.add_argument('--preload_data', type=bool, default=True,
+    #                     help='preload data into RAM')
+
+    # Model
+    parser.add_argument('-cls', '--classifier', type=str, default='resnet18',
+                        choices=['resnet18', 'resnet101'])
+
+    # Optimization
+    parser.add_argument('--lr', type=float, default=0.00001,
+                        help='learning rate')
+
+    parser.add_argument('--batch_size', type=int, default=32,
+                        help='batch_size')
+
+    parser.add_argument('--epochs', type=int, default=1,
+                        help='number of epochs')
+
+    parser.add_argument('--weight_decay', type=float, default=0.000001,
+                        help='weight decay')
+
+    parser.add_argument('--convergence_criterion', type=float, default=0.004 ,
+                        help='convergence_criterion ')
+
+    parser.add_argument('--momentum', type=float, default=0.9,
+                        help='momentum')                        
+
+# TODO: fix these as parms.
+# add and replace
+#     max_epochs = 8
+#     convergence_criterion = 0.004  # End early if loss is less than this
+#     lr = 0.00001
+#     weight_decay = 0.000001
+#     momentum = 0.9 #  TODO: not used currently
+
+    # Continual Learning
+    # parser.add_argument('--replay_examples', type=int, default=0,
+    #                     help='data examples to keep in memory for each batch '
+    #                          'for replay.')
+
+    args = parser.parse_args()
     
+    args.n_classes = 50
+    #args.input_size = [3, 128, 128]
+
+    args.cuda = torch.cuda.is_available()
+    args.device = 'cuda:0' if args.cuda else 'cpu'
+
+    if args.cuda:
+        print('cuda IS available')
+    else:
+        print('cuda / GPU not available.')
+
+
+    main(args)
