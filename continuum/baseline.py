@@ -19,6 +19,19 @@ from continuum.datasets import Core50
 from continuum.tasks import split_train_val
 from torchvision.transforms.transforms import Normalize, ToTensor
 
+
+def on_task_update(task_id x_mem, y_mem):
+    """
+    EWC weight updater
+    """
+    pass
+
+def train_ewc(model, device, task_id, x_train, y_train, optimizer, epoch):
+    """
+    EWC Trainer
+    """
+    pass
+
 def main(args):
 
     print(os.getcwd())
@@ -159,7 +172,7 @@ def main(args):
         
         classifier.train()
 
-        
+    # TO DO Add EWC Training
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Ted David Shawn - NJIT')
