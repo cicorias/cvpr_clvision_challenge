@@ -49,7 +49,7 @@ else:
 
 # Tune the model hyperparameters
 max_epochs = 8
-convergence_criterion = 0.004
+convergence_criterion = 0.004  # End early if loss is less than this
 lr = 0.00001
 weight_decay = 0.000001
 momentum = 0.9
@@ -60,20 +60,22 @@ optimizer = optim.SGD(classifier.parameters(), lr=lr, weight_decay=weight_decay)
 
 # Iterate through our NC scenario
 for task_id, train_taskset in enumerate(scenario):
+
     print(f"<-------------- Task {task_id + 1} ---------------->")
-    # train_taskset, val_taskset = split_train_val(train_taskset, val_split=0.1)
+
     train_loader = DataLoader(train_taskset, batch_size=32, shuffle=True)
-    
     unq_cls_train = np.unique(train_taskset._y)
+
     print(f"This task contains {len(unq_cls_train)} unique classes")
     print(f"Training classes: {unq_cls_train}")
 
     # End early criterion
     last_avg_running_loss = convergence_criterion
     did_converge = False
+
     for epoch in range(max_epochs):
 
-        # End if the loss has converged
+        # End if the loss has converged to criterion
         if did_converge:
             break
 
@@ -112,8 +114,10 @@ for task_id, train_taskset in enumerate(scenario):
     print("Finished Training")
     classifier.eval()
 
-    # Validation against separate validation data
+    # Validate against separate validation data
     for val_task_id, val_taskset in enumerate(scenario_val):
+
+        # Validate on all previously trained tasks (but not future tasks)
         if val_task_id > task_id:
             break
 
