@@ -61,6 +61,10 @@ def main(args):
     else:
         raise Exception('no classifier picked')
 
+    # Fix for RuntimeError: Input type (torch.cuda.FloatTensor) and weight type (torch.FloatTensor) should be the same
+    if torch.cuda.is_available():
+        classifier.cuda()
+
     # Tune the model hyperparameters
     max_epochs = args.epochs # 8
     convergence_criterion = args.convergence_criterion # 0.004  # End early if loss is less than this
