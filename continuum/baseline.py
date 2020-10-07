@@ -146,11 +146,12 @@ def main(args):
         classifier.eval()
 
         # Validate against separate validation data
+        cum_accuracy = 0.0
         for val_task_id, val_taskset in enumerate(scenario_val):
 
             # Validate on all previously trained tasks (but not future tasks)
-            if val_task_id > task_id:
-                break
+            # if val_task_id > task_id:
+            #     break
 
             val_loader = DataLoader(val_taskset, batch_size=32, shuffle=True)
 
@@ -169,7 +170,9 @@ def main(args):
                     correct += (predicted == y).sum().item()
             
             print(f"Validation Accuracy: {100.0 * correct / total}%")
+            cum_accuracy += (correct / total)
         
+        print(f"Average Accuracy: {cum_accuracy / 9}")
         classifier.train()
 
     # TO DO Add EWC Training
