@@ -3,7 +3,7 @@
 
 import os
 import argparse
-
+import matplotlib.pyplot as plt
 from typing import Iterable, Set, Tuple, Union
 
 import numpy as np
@@ -89,6 +89,10 @@ def main(args):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(classifier.parameters(), lr=lr, weight_decay=weight_decay)
 
+    # Naive_acc
+
+    naive_accs = []
+
     # Iterate through our NC scenario
     for task_id, train_taskset in enumerate(scenario):
 
@@ -140,7 +144,8 @@ def main(args):
                     last_avg_running_loss = avg_running_loss
                     running_loss = 0.0
 
-            print(f"Training accuracy: {100.0 * train_correct / train_total}%")                 
+            print(f"Training accuracy: {100.0 * train_correct / train_total}%")
+                          
 
         print("Finished Training")
         classifier.eval()
@@ -173,9 +178,22 @@ def main(args):
             cum_accuracy += (correct / total)
         
         print(f"Average Accuracy: {cum_accuracy / 9}")
+        naive_accs.append((cum_accuracy / 9))   
         classifier.train()
 
     # TO DO Add EWC Training
+
+    # Plot
+
+    plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], naive_accs, '-o', label="Naive")
+    #plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], rehe_accs, '-o', label="Rehearsal")
+    #plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], ewc_accs, '-o', label="EWC")
+    plt.xlabel('Tasks Encountered', fontsize=14)
+    plt.ylabel('Average Accuracy', fontsize=14)
+    plt.title('CL Strategies Comparison on Core50', fontsize=14);
+    plt.xticks([1, 2, 3, 4, 5, 6, 7, 8, 9])
+    plt.legend(prop={'size': 16});
+    plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Ted David Shawn - NJIT')
