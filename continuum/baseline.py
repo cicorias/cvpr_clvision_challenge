@@ -5,7 +5,7 @@ import os
 import argparse
 import matplotlib.pyplot as plt
 from typing import Iterable, Set, Tuple, Union
-
+import datetime as dt
 import numpy as np
 
 import torch
@@ -185,15 +185,18 @@ def main(args):
 
     # Plot
 
+    
     plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], naive_accs, '-o', label="Naive")
     #plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], rehe_accs, '-o', label="Rehearsal")
     #plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], ewc_accs, '-o', label="EWC")
     plt.xlabel('Tasks Encountered', fontsize=14)
     plt.ylabel('Average Accuracy', fontsize=14)
-    plt.title('CL Strategies Comparison on Core50', fontsize=14);
+    plt.title('CL Strategies Comparison on Core50', fontsize=14)
     plt.xticks([1, 2, 3, 4, 5, 6, 7, 8, 9])
-    plt.legend(prop={'size': 16});
+    plt.legend(prop={'size': 16})
     plt.show()
+    filenames = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    plt.savefig('continuum/output/run_'+filenames+'.png')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Ted David Shawn - NJIT')
