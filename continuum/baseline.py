@@ -166,19 +166,26 @@ def main(args):
 
             total = 0.0
             correct = 0.0
+            pred_classes = np.array([])
             with torch.no_grad():
                 for x, y, t in val_loader:
                     x, y = x.cuda(), y.cuda()
                     outputs = classifier(x)
                     _, predicted = torch.max(outputs.data, 1)
+                    pred_classes = np.unique(np.append(pred_classes, predicted.cpu()))
                     total += y.size(0)
                     correct += (predicted == y).sum().item()
             
+            print(f"Classes predicted: {pred_classes}")
             print(f"Validation Accuracy: {100.0 * correct / total}%")
             cum_accuracy += (correct / total)
         
+<<<<<<< Updated upstream
         print(f"Average Accuracy: {cum_accuracy / 9}")
         naive_accs.append((cum_accuracy / 9))   
+=======
+        print(f"Average Accuracy: {100.0 * cum_accuracy / 9.0}%")
+>>>>>>> Stashed changes
         classifier.train()
 
     # TO DO Add EWC Training
