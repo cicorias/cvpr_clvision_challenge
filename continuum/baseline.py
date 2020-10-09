@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from typing import Iterable, Set, Tuple, Union
 import datetime as dt
 import numpy as np
-
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -35,6 +35,8 @@ def train_ewc(model, device, task_id, x_train, y_train, optimizer, epoch):
 def main(args):
 
     print(os.getcwd())
+
+    start_time = time.time()
 
     # print args recap
     print(args, end="\n\n")
@@ -180,6 +182,10 @@ def main(args):
         print(f"Average Accuracy: {cum_accuracy / 9}")
         naive_accs.append((cum_accuracy / 9))   
         classifier.train()
+    
+    # Running Time
+
+    print("--- %s seconds ---" % (time.time() - start_time))
 
     # TO DO Add EWC Training
 
@@ -218,7 +224,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=32,
                         help='batch_size')
 
-    parser.add_argument('--epochs', type=int, default=1,
+    parser.add_argument('--epochs', type=int, default=4,
                         help='number of epochs')
 
     parser.add_argument('--weight_decay', type=float, default=0.000001,
