@@ -42,12 +42,13 @@ def train_ewc(model, device, task_id, x_train, y_train, optimizer, epoch):
     pass
 
 
-    start_time = time.time()
-
 def main(args):
     def print2(parms, *aargs, **kwargs):
         redirect(parms, path=args.outfile, *aargs, **kwargs)
     
+
+    start_time = time.time()
+
     # print args recap
     print2(args, end='\n\n')
     print2('hello {}'.format('world'))
