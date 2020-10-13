@@ -87,16 +87,44 @@ def main(args):
 
     # Define a loss function and criterion
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(classifier.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = optim.SGD(
+        classifier.parameters(), 
+        lr=lr, 
+        weight_decay=weight_decay, 
+        momentum=momentum
+        )
 
     # Naive_acc
-
     naive_accs = []
+    replay_examples = {
+        'x': np.array([], dtype='<U49'),
+        'y': np.array([], dtype='int64'),
+        't': np.array([], dtype='int64')
+    }
 
     # Iterate through our NC scenario
     for task_id, train_taskset in enumerate(scenario):
 
         print(f"<-------------- Task {task_id + 1} ---------------->")
+        
+        for prev_id, prev_taskset in enumerate(scenario):
+            if prev_id == task_id:
+                break
+            # Grab new replay examples
+            replay_examples['x'] = np.append(
+                replay_examples['x'], np.random.choice(prev_taskset._x, size=2098, replace=False)
+            )
+            replay_examples['y'] = np.append(
+                replay_examples['y'], np.random.choice(prev_taskset._y, size=2098, replace=False)
+            )
+            replay_examples['t'] = np.append(
+                replay_examples['t'], np.random.choice(prev_taskset._t, size=2098, replace=False)
+            )
+
+        # Add replay examples
+        train_taskset._x = np.append(train_taskset._x, replay_examples['x'])
+        train_taskset._y = np.append(train_taskset._y, replay_examples['y'])
+        train_taskset._t = np.append(train_taskset._t, replay_examples['t'])  
 
         train_loader = DataLoader(train_taskset, batch_size=32, shuffle=True)
         unq_cls_train = np.unique(train_taskset._y)
@@ -120,7 +148,7 @@ def main(args):
             train_total = 0.0
             train_correct = 0.0 
             for i, (x, y, t) in enumerate(train_loader):
-                
+
                 # Outputs batches of data, one scenario at a time
                 x, y = x.cuda(), y.cuda()
                 outputs = classifier(x)
@@ -180,12 +208,10 @@ def main(args):
             print(f"Validation Accuracy: {100.0 * correct / total}%")
             cum_accuracy += (correct / total)
         
-<<<<<<< Updated upstream
         print(f"Average Accuracy: {cum_accuracy / 9}")
         naive_accs.append((cum_accuracy / 9))   
-=======
         print(f"Average Accuracy: {100.0 * cum_accuracy / 9.0}%")
->>>>>>> Stashed changes
+
         classifier.train()
 
     # TO DO Add EWC Training
@@ -193,12 +219,12 @@ def main(args):
     # Plot
 
     
-    plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], naive_accs, '-o', label="Naive")
+    plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], naive_accs, '-o', label="Rehersal")
     #plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], rehe_accs, '-o', label="Rehearsal")
     #plt.plot([1, 2, 3, 4, 5, 6, 7, 8, 9], ewc_accs, '-o', label="EWC")
     plt.xlabel('Tasks Encountered', fontsize=14)
     plt.ylabel('Average Accuracy', fontsize=14)
-    plt.title('CL Strategies Comparison on Core50', fontsize=14)
+    plt.title('Rehersal Strategy on Core50 w/ResNet18', fontsize=14)
     plt.xticks([1, 2, 3, 4, 5, 6, 7, 8, 9])
     plt.legend(prop={'size': 16})
     plt.show()
@@ -225,7 +251,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=32,
                         help='batch_size')
 
-    parser.add_argument('--epochs', type=int, default=1,
+    parser.add_argument('--epochs', type=int, default=12,
                         help='number of epochs')
 
     parser.add_argument('--weight_decay', type=float, default=0.000001,
