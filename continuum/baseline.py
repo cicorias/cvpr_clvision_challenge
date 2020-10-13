@@ -41,6 +41,36 @@ def train_ewc(model, device, task_id, x_train, y_train, optimizer, epoch):
     """
     pass
 
+def taskset_with_replay(scenario, task_id, train_taskset, proportion):
+    replay_examples = {
+        'x': np.array([], dtype='<U49'),
+        'y': np.array([], dtype='int64'),
+        't': np.array([], dtype='int64')
+    }
+
+    for prev_id, prev_taskset in enumerate(scenario):
+        if prev_id == task_id:
+            break
+
+        sz = round(len(prev_taskset) * proportion)
+        # Grab new replay examples
+        replay_examples['x'] = np.append(
+            replay_examples['x'], np.random.choice(prev_taskset._x, size=sz, replace=False)
+        )
+        replay_examples['y'] = np.append(
+            replay_examples['y'], np.random.choice(prev_taskset._y, size=sz, replace=False)
+        )
+        replay_examples['t'] = np.append(
+            replay_examples['t'], np.random.choice(prev_taskset._t, size=sz, replace=False)
+        )
+
+        # Add replay examples
+        train_taskset._x = np.append(train_taskset._x, replay_examples['x'])
+        train_taskset._y = np.append(train_taskset._y, replay_examples['y'])
+        train_taskset._t = np.append(train_taskset._t, replay_examples['t'])
+
+    return train_taskset
+
 
 def main(args):
     def print2(parms, *aargs, **kwargs):
@@ -120,25 +150,10 @@ def main(args):
     for task_id, train_taskset in enumerate(scenario):
 
         print(f"<-------------- Task {task_id + 1} ---------------->")
-        
-        for prev_id, prev_taskset in enumerate(scenario):
-            if prev_id == task_id:
-                break
-            # Grab new replay examples
-            replay_examples['x'] = np.append(
-                replay_examples['x'], np.random.choice(prev_taskset._x, size=2098, replace=False)
-            )
-            replay_examples['y'] = np.append(
-                replay_examples['y'], np.random.choice(prev_taskset._y, size=2098, replace=False)
-            )
-            replay_examples['t'] = np.append(
-                replay_examples['t'], np.random.choice(prev_taskset._t, size=2098, replace=False)
-            )
 
-        # Add replay examples
-        train_taskset._x = np.append(train_taskset._x, replay_examples['x'])
-        train_taskset._y = np.append(train_taskset._y, replay_examples['y'])
-        train_taskset._t = np.append(train_taskset._t, replay_examples['t'])  
+        # Use replay if it's specified
+        if args.replay:
+            train_taskset = taskset_with_replay(scenario, task_id, args.replay)
 
         train_loader = DataLoader(train_taskset, batch_size=32, shuffle=True)
         unq_cls_train = np.unique(train_taskset._y)
@@ -278,7 +293,9 @@ if __name__ == "__main__":
                         help='convergence_criterion ')
 
     parser.add_argument('--momentum', type=float, default=0.9,
-                        help='momentum')          
+                        help='momentum')
+
+    parset.add_argument('--replay', type=float, default=0.0, help='proportion of training to replay')
 
     import datetime
     temp_out_file = datetime.datetime.now().strftime('./%Y_%m_%d-%H_%M_%S') + '.txt'
