@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
+from contextlib import redirect_stdout
+
 import argparse
 import matplotlib.pyplot as plt
 from typing import Iterable, Set, Tuple, Union
 import datetime as dt
 import numpy as np
-
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -19,6 +22,12 @@ from continuum.datasets import Core50
 from continuum.tasks import split_train_val
 from torchvision.transforms.transforms import Normalize, ToTensor
 
+def redirect(text, path='./out.txt', *args, **kwargs):
+    # first send to normal stdout.
+    print(text, *args, **kwargs)
+    with open(path, 'a+') as out:
+        with redirect_stdout(out):
+            print(text, *args, **kwargs)
 
 def on_task_update(task_id, x_mem, y_mem):
     """
@@ -32,13 +41,18 @@ def train_ewc(model, device, task_id, x_train, y_train, optimizer, epoch):
     """
     pass
 
-def main(args):
 
-    print(os.getcwd())
+def main(args):
+    def print2(parms, *aargs, **kwargs):
+        redirect(parms, path=args.outfile, *aargs, **kwargs)
+    
+
+    start_time = time.time()
 
     # print args recap
-    print(args, end="\n\n")
-
+    print2(args, end='\n\n')
+    print2('hello {}'.format('world'))
+    
     # Load the core50 data
     # TODO: check the symbolic links as for me no '../' prefix needed.
     core50 = Core50("core50/data/", train=True, download=False)
@@ -58,8 +72,8 @@ def main(args):
         transformations=[ ToTensor(), Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])]
     )
 
-    print(f"Number of classes: {scenario.nb_classes}.")
-    print(f"Number of tasks: {scenario.nb_tasks}.")
+    print2(f"Number of classes: {scenario.nb_classes}.")
+    print2(f"Number of tasks: {scenario.nb_tasks}.")
 
     # Define a model
     # model
@@ -129,8 +143,8 @@ def main(args):
         train_loader = DataLoader(train_taskset, batch_size=32, shuffle=True)
         unq_cls_train = np.unique(train_taskset._y)
 
-        print(f"This task contains {len(unq_cls_train)} unique classes")
-        print(f"Training classes: {unq_cls_train}")
+        print2(f"This task contains {len(unq_cls_train)} unique classes")
+        print2(f"Training classes: {unq_cls_train}")
 
         # End early criterion
         last_avg_running_loss = convergence_criterion #  TODO: not used currently
@@ -142,7 +156,7 @@ def main(args):
             if did_converge:
                 break
 
-            print(f"<------ Epoch {epoch + 1} ------->")
+            print2(f"<------ Epoch {epoch + 1} ------->")
 
             running_loss = 0.0
             train_total = 0.0
@@ -164,18 +178,17 @@ def main(args):
                 
                 if i % 100 == 99:
                     avg_running_loss = running_loss / 3200
-                    print(f'[Mini-batch {i + 1}] avg loss: {avg_running_loss:.5f}')
+                    print2(f'[Mini-batch {i + 1}] avg loss: {avg_running_loss:.5f}')
                     # End early criterion
                     if avg_running_loss < convergence_criterion:
                         did_converge = True
                         break
                     last_avg_running_loss = avg_running_loss
                     running_loss = 0.0
-
-            print(f"Training accuracy: {100.0 * train_correct / train_total}%")
                           
+            print2(f"Training accuracy: {100.0 * train_correct / train_total}%")                 
 
-        print("Finished Training")
+        print2("Finished Training")
         classifier.eval()
 
         # Validate against separate validation data
@@ -190,7 +203,7 @@ def main(args):
 
             # Make sure we're validating the correct classes
             unq_cls_validate = np.unique(val_taskset._y)
-            print(f"Validating classes: {unq_cls_validate}")
+            print2(f"Validating classes: {unq_cls_validate}")
 
             total = 0.0
             correct = 0.0
@@ -213,6 +226,10 @@ def main(args):
         print(f"Average Accuracy: {100.0 * cum_accuracy / 9.0}%")
 
         classifier.train()
+    
+    # Running Time
+
+    print("--- %s seconds ---" % (time.time() - start_time))
 
     # TO DO Add EWC Training
 
@@ -251,7 +268,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=32,
                         help='batch_size')
 
-    parser.add_argument('--epochs', type=int, default=12,
+    parser.add_argument('--epochs', type=int, default=4,
                         help='number of epochs')
 
     parser.add_argument('--weight_decay', type=float, default=0.000001,
@@ -261,7 +278,12 @@ if __name__ == "__main__":
                         help='convergence_criterion ')
 
     parser.add_argument('--momentum', type=float, default=0.9,
-                        help='momentum')                        
+                        help='momentum')          
+
+    import datetime
+    temp_out_file = datetime.datetime.now().strftime('./%Y_%m_%d-%H_%M_%S') + '.txt'
+    parser.add_argument('--outfile', type=str, default=temp_out_file)
+           
 
 # TODO: fix these as parms.
 # add and replace
