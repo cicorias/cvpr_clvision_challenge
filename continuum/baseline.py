@@ -295,7 +295,7 @@ if __name__ == "__main__":
     parser.add_argument('--momentum', type=float, default=0.9,
                         help='momentum')
 
-    parset.add_argument('--replay', type=float, default=0.0, help='proportion of training to replay')
+    parser.add_argument('--replay', type=float, default=0.0, help='proportion of training to replay')
 
     import datetime
     temp_out_file = datetime.datetime.now().strftime('./%Y_%m_%d-%H_%M_%S') + '.txt'
